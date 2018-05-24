@@ -1,3 +1,8 @@
+{-# LANGUAGE
+      OverloadedStrings
+    , MultiParamTypeClasses 
+    , FlexibleInstances #-}
+
 
 {- Author: Devin Hill (dhill45@jhu.edu) -}
 
@@ -16,12 +21,13 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
 import Data.String (fromString)
-
 import Data.Char (toUpper)
+import Data.Functor(($>), void)
+
+import Control.Applicative
 
 
-
-type Scan a = Parser ByteString (Either String) a
+type Scan a = Parser ByteString Maybe a
 
 
 data Token
@@ -48,6 +54,8 @@ data Token
   | Key'TST
   | Key'CUE
   | Key'DIE
+  | Key'INC
+  | Key'DEC
   deriving (Show, Eq, Ord)
 
 
@@ -65,6 +73,8 @@ keywords = Map.fromList
   , "MOD" -: Key'MOD
   , "TST" -: Key'TST
   , "CUE" -: Key'CUE
+  , "INC" -: Key'INC
+  , "DEC" -: Key'DEC
   ]
   where
     (-:) :: a -> b -> (a, b)
@@ -88,6 +98,31 @@ symbols = Map.fromList
     (-:) = (,) -- for fewer parentheses
   
   
+    
+    
+-- | Define a parsable interface for ByteStrings so that
+--   we don't have to deal with the abysmal performance/size of String
+--   (and since we only use ASCII anyway, this works fine)
+instance Parsable ByteString Char where
+  
+  next = Parser $ \bstring ->
+    case B.uncons bstring of
+      Nothing      -> empty
+      Just (c, cs) -> pure (c, cs)
+      
+  peek = Parser $ \bstring ->
+    case B.uncons bstring of
+      Nothing      -> empty
+      Just (c, cs) -> pure (c, bstring)
+      
+  eof = Parser $ \bstring ->
+    if B.null bstring then 
+      pure ((), bstring) 
+    else 
+      empty
+      
+    
+    
   
 
 scan :: Scan [Token]

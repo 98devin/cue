@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a8c7c22200b23cf6e510d34fda9f0734ab2fd1825b10450f613848170e756244
+-- hash: f52168c82da683ac9e57df444b4da5a715a7d7217997857720d9358639d93df8
 
 name:           cue
 version:        0.1.0.0
@@ -21,6 +21,7 @@ extra-source-files:
 executable cue
   main-is: Main.hs
   other-modules:
+      Cue.Abstract
       Cue.Parser
       Cue.Scanner
       Parser.Combinators
@@ -32,4 +33,5 @@ executable cue
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
   default-language: Haskell2010
