@@ -1,0 +1,22 @@
+name:                cue
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/githubuser/cue#readme
+license:             WTF
+author:              Devin Hill
+maintainer:          dhill45@jhu.edu
+copyright:           2018 Devin Hill
+category:            Language
+
+extra-source-files:
+- README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+  - bytestring
+
+executables:
+  cue:
+    source-dirs:      src
+    main:             Main.hs

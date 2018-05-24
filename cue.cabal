@@ -1,0 +1,33 @@
+-- This file has been generated from package.yaml by hpack version 0.28.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 0eaad2d68ed5f3f29cfc1f2178a580b8be4334bd5e05a09d08d1a2c5cbf4ba13
+
+name:           cue
+version:        0.1.0.0
+category:       Language
+homepage:       https://github.com/githubuser/cue#readme
+author:         Devin Hill
+maintainer:     dhill45@jhu.edu
+copyright:      2018 Devin Hill
+license:        WTF
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+extra-source-files:
+    README.md
+
+executable cue
+  main-is: Main.hs
+  other-modules:
+      Parser.Combinators
+      Parser.Err
+      Parser.Pos
+      Paths_cue
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+  default-language: Haskell2010
