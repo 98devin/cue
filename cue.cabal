@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0eaad2d68ed5f3f29cfc1f2178a580b8be4334bd5e05a09d08d1a2c5cbf4ba13
+-- hash: a8c7c22200b23cf6e510d34fda9f0734ab2fd1825b10450f613848170e756244
 
 name:           cue
 version:        0.1.0.0
@@ -21,6 +21,8 @@ extra-source-files:
 executable cue
   main-is: Main.hs
   other-modules:
+      Cue.Parser
+      Cue.Scanner
       Parser.Combinators
       Parser.Err
       Parser.Pos
