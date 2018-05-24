@@ -6,7 +6,10 @@
 
 {- Author: Devin Hill (dhill45@jhu.edu) -}
       
-module Cue.Parser where
+module Cue.Parser
+  ( Symbols
+  , parse
+  ) where
 
   
 import Parser.Combinators
@@ -63,6 +66,8 @@ parseError' s = empty <!> s
 -- | Produce a STRONG error during parsing with the provided message
 parseError :: String -> P a
 parseError s = empty <!!> s
+
+
 
 
 

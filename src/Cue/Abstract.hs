@@ -1,7 +1,11 @@
 
 {- Author: Devin Hill (dhill45@jhu.edu) -}
 
-module Cue.Abstract where
+module Cue.Abstract
+  ( AST(..)
+  , RegExpr(..)
+  , Comp(..)
+  ) where
   
   
 import Data.ByteString.Lazy.Char8 (ByteString)
