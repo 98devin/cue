@@ -28,12 +28,13 @@ fib2 {
   put %2;
   
   get %1;
+  put %0;
+  
   add %1;
   
   put %1;
   put %1;
   
-  put %0;
   cue fib2;
   
 }
