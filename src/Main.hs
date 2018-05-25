@@ -34,7 +34,7 @@ import Cue.Interpreter
 
   
 -------------------------------------------------------------------
---    Primary command-line interface to SIMPLE compiler          --
+--    Primary command-line interface to Cue interpreter          --
 -------------------------------------------------------------------
 
 -- | Main application entry point

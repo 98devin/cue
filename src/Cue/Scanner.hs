@@ -60,7 +60,7 @@ data Token
 
 
   
-  -- | A map from bytestrings which would otherwise
+-- | A map from bytestrings which would otherwise
 --   be valid identifiers to their keyword representation
 keywords :: Map ByteString Token
 keywords = Map.fromList
@@ -83,7 +83,7 @@ keywords = Map.fromList
     (-:) = (,) -- for fewer parentheses
 
     
--- | A map of the one-character symbols in SIMPL,
+-- | A map of the one-character symbols in cue,
 --   the two-character cases are separate (special cases)
 symbols :: Map Char Token
 symbols = Map.fromList
@@ -103,9 +103,7 @@ symbols = Map.fromList
   
     
     
--- | Define a parsable interface for ByteStrings so that
---   we don't have to deal with the abysmal performance/size of String
---   (and since we only use ASCII anyway, this works fine)
+-- Define a parsable interface for ByteStrings to enable combinators
 instance Parsable ByteString Char where
   
   next = Parser $ \bstring ->
@@ -129,7 +127,7 @@ instance Parsable ByteString Char where
   
 
 scan :: Scan [Token]
-scan = many (ws *> (identifier <|> number <|> symbol)) <* ws <* eof
+scan = many (ws *> many (comment *> ws) *> (identifier <|> number <|> symbol)) <* ws <* many (comment *> ws) <* eof
   
 
 digit :: Scan Char
@@ -137,13 +135,22 @@ digit = among . map match $ ['0'..'9']
   
 
 letter :: Scan Char
-letter = among . map match $ ['A'..'Z'] ++ ['a'..'z']
+letter = among . map match $ ['A'..'Z'] ++ ['a'..'z'] ++ "_-"
 
 
+-- general whitespace
 ws :: Scan ()
 ws = void $ many . among . map match $
   [ ' ', '\n', '\t', '\r', '\f' ] -- The characters specified to be whitespace
-
+  
+  
+comment :: Scan ()
+comment = do
+  match '#'
+  many $ satisfy (not . (`elem` ("\r\n" :: String))) next
+  void (match '\n') <|> void (matches "\r\n")
+  return ()
+  
 
 identifier :: Scan Token
 identifier = do

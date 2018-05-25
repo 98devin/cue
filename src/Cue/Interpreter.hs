@@ -64,19 +64,20 @@ interpret syms input =
 interp :: I ()
 interp = do
   calls <- gets callQueue
-  unless (Seq.null calls) $ do
-    let c :<| cs = calls
+  case calls of
     
-    modify' $ \s -> 
-      s { callQueue = cs, acc = 0 }
-    
-    syms <- gets symbols
-    let body = Map.findWithDefault [] c syms
-    callCC $ \exit ->
-      forM_ body $ \stmt -> do
-        interpStmt exit stmt
-    interp
-          
+    c :<| cs -> do
+      modify' $ \s -> 
+        s { callQueue = cs, acc = 0 }
+      
+      syms <- gets symbols
+      let body = Map.findWithDefault [] c syms
+      callCC $ \exit ->
+        forM_ body $ \stmt -> do
+          interpStmt exit stmt
+      interp
+      
+    Empty -> return ()
           
           
 getNthQueue :: Integer -> I (Seq Integer)
@@ -107,8 +108,7 @@ getRExp' = \case
     
 
 interpStmt :: (() -> I' r ()) -> AST -> I' r ()
-interpStmt exit = \case
-      
+interpStmt exit = \case    
   AST'Put re -> do
     
     q <- getRExp re
@@ -120,7 +120,6 @@ interpStmt exit = \case
     -- Update modified queue
     modify' $ \s ->
       s { dataQueue = Map.insert q e' $ dataQueue s }
-    
     
   AST'Com com re -> do
     
@@ -134,7 +133,6 @@ interpStmt exit = \case
     -- Update accumulator and modified queue
     modify' $ \s ->
       s { acc = combination com (acc s) val, dataQueue = Map.insert q e' $ dataQueue s }
-    
     
   AST'Tst Accumulator comp rhs body -> do
         
@@ -153,8 +151,6 @@ interpStmt exit = \case
       
       when (comparison comp a val) $
         forM_ body (interpStmt exit)
-            
-        
         
   AST'Tst lhs comp rhs body -> do
     
@@ -179,13 +175,14 @@ interpStmt exit = \case
           
     when (comparison comp vall valr) $
       forM_ body (interpStmt exit)
-        
     
   AST'Die -> exit ()
-  
   
   AST'Inc -> modify' $ \s -> s { acc = succ (acc s) }
   
   AST'Dec -> modify' $ \s -> s { acc = pred (acc s) }
   
   AST'Cue bs -> modify' $ \s -> s { callQueue = callQueue s :|> bs }
+  
+  
+  
