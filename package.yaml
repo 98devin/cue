@@ -2,8 +2,8 @@ name:                cue
 version:             0.1.0.0
 #synopsis:
 #description:
-homepage:            https://github.com/githubuser/cue#readme
-license:             WTF
+homepage:            https://github.com/98devin/cue#readme
+license:             BSD
 author:              Devin Hill
 maintainer:          dhill45@jhu.edu
 copyright:           2018 Devin Hill

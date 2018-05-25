@@ -26,6 +26,10 @@ fib2 {
   tst < %3 { die; } # end program if it's less than 0
   put %2;           # update remaining values
   
+  # the queue %1 is in the state
+    # [a, b, b]
+  # where a and b are consecutive fibonacci numbers
+  
   get %1; # a
   put %0; # output a
   
