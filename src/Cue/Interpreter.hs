@@ -64,20 +64,16 @@ interpret syms input =
 interp :: I ()
 interp = do
   calls <- gets callQueue
-  case calls of
-    
-    c :<| cs -> do
-      modify' $ \s -> 
-        s { callQueue = cs, acc = 0 }
-      
-      syms <- gets symbols
-      let body = Map.findWithDefault [] c syms
-      callCC $ \exit ->
-        forM_ body $ \stmt -> do
-          interpStmt exit stmt
-      interp
-      
-    Empty -> return ()
+  unless (Seq.null calls) $ do
+    let c :<| cs  = calls
+    modify' $ \s -> 
+      s { callQueue = cs, acc = 0 }
+    syms <- gets symbols
+    let body = Map.findWithDefault [] c syms
+    callCC $ \exit ->
+      forM_ body $ \stmt -> do
+        interpStmt exit stmt
+    interp
           
           
 getNthQueue :: Integer -> I (Seq Integer)
