@@ -75,6 +75,7 @@ main = do
 data CLIOptions = CLIOptions
   { optStringInput :: Bool
   , optListInput   :: Bool
+  , optSTDINput    :: Bool
   }
 
   
@@ -83,6 +84,7 @@ defaultOptions :: CLIOptions
 defaultOptions = CLIOptions
   { optStringInput = False
   , optListInput   = True
+  , optSTDINput    = False
   }
   
   
@@ -95,6 +97,11 @@ cliFlags =
       (NoArg $ \o -> o { optStringInput = True
                        , optListInput   = False }) 
       "use the cli args as string contents of the input queue"
+  
+  , Option ['e'] []
+      (NoArg $ \o -> o { optSTDINput = True })
+      "read input from STDIN"
+      
   ]
   
   
@@ -110,10 +117,14 @@ handleArgs argv = case getOpt RequireOrder cliFlags argv of
     
     -- load a bytestring from either stdin or a file,
     -- checking for potential errors (no such file, etc.)
-    (inFile, otherOpts) <- case otherOpts of
+    (inFile, others) <- case otherOpts of
         
         -- If there is no command line input, read from stdin
-        [inFile] -> (,) <$> B.readFile inFile <*> (words . B.unpack <$> B.getContents) 
+        [inFile] -> (,) <$> B.readFile inFile <*>
+          (if optSTDINput then
+                words . B.unpack <$> B.getContents
+           else
+                return [])
         
         -- Otherwise use what's given
         (inFile:params) -> flip (,) params <$> B.readFile inFile
@@ -122,9 +133,9 @@ handleArgs argv = case getOpt RequireOrder cliFlags argv of
         
         
     if optStringInput then
-        return (opts, map (toInteger . ord) . unwords $ otherOpts, inFile)
+        return (opts, map (toInteger . ord) . unwords $ others, inFile)
     else if optListInput then
-        return (opts, map read otherOpts, inFile)
+        return (opts, map read others, inFile)
     else
         die "what in tarnation"
       

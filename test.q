@@ -1,34 +1,25 @@
 
 
-
 foo {
-  
   inc; inc; inc;
   put %1;
-  
 }
 
 
-bar {
-  
+bar {  
   inc; inc;
   put %1;
-  
 }
 
 
 bazEntry {
-  
   cue bar;
   cue foo;
   cue baz;
-  
-  cue 
-  
 }
 
+
 baz {
-  
   inc;
   put %1;
   
@@ -45,12 +36,10 @@ baz {
   put %0;
   put %0;
   put %0;
-  
 }
 
 
 main {
-  
   inc;
   inc;
  
@@ -58,9 +47,6 @@ main {
   mul %0;
  
   inc;
-  
   put %0;
-  
   cue bazEntry;
-  
 }
