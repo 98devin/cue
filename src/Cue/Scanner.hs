@@ -68,6 +68,7 @@ keywords = Map.fromList
   , "PUT" -: Key'PUT
   , "POP" -: Key'POP
   , "ADD" -: Key'ADD
+  , "MUL" -: Key'MUL
   , "SUB" -: Key'SUB
   , "DIV" -: Key'DIV
   , "MOD" -: Key'MOD
@@ -75,6 +76,7 @@ keywords = Map.fromList
   , "CUE" -: Key'CUE
   , "INC" -: Key'INC
   , "DEC" -: Key'DEC
+  , "DIE" -: Key'DIE
   ]
   where
     (-:) :: a -> b -> (a, b)
@@ -92,6 +94,7 @@ symbols = Map.fromList
   , '>' -: Sym'GTSIGN
   , '{' -: Sym'LBRACE
   , '}' -: Sym'RBRACE
+  , '!' -: Sym'NOT
   ]    
   where
     (-:) :: a -> b -> (a, b)

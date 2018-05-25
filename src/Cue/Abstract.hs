@@ -1,3 +1,6 @@
+{-# LANGUAGE
+      LambdaCase #-}
+
 
 {- Author: Devin Hill (dhill45@jhu.edu) -}
 
@@ -5,6 +8,9 @@ module Cue.Abstract
   ( AST(..)
   , RegExpr(..)
   , Comp(..)
+  , Combine(..)
+  , combination
+  , comparison
   ) where
   
   
@@ -18,14 +24,8 @@ import qualified Data.Map.Strict as Map
 
 
 data AST
-  = AST'Get RegExpr
-  | AST'Put RegExpr
-  | AST'Pop RegExpr
-  | AST'Add RegExpr
-  | AST'Sub RegExpr
-  | AST'Mul RegExpr
-  | AST'Div RegExpr
-  | AST'Mod RegExpr
+  = AST'Put RegExpr
+  | AST'Com Combine RegExpr
   | AST'Tst RegExpr Comp RegExpr [AST]
   | AST'Die
   | AST'Inc
@@ -33,13 +33,33 @@ data AST
   | AST'Cue ByteString
   deriving (Eq, Ord, Show)
   
-  
-  
 data RegExpr
   = Queue RegExpr
   | Value Integer
   | Accumulator
   deriving (Eq, Ord, Show)
+
+  
+
+data Combine
+  = Comb'GET
+  | Comb'POP
+  | Comb'ADD
+  | Comb'MUL
+  | Comb'SUB
+  | Comb'DIV
+  | Comb'MOD
+  deriving (Eq, Ord, Show)
+  
+combination :: Combine -> Integer -> Integer -> Integer
+combination = \case
+  Comb'GET -> flip const
+  Comb'POP -> const
+  Comb'ADD -> (+)
+  Comb'MUL -> (*)
+  Comb'SUB -> (-)
+  Comb'DIV -> div
+  Comb'MOD -> mod
   
   
   
@@ -51,3 +71,13 @@ data Comp
   | Comp'GTE
   | Comp'NEQ
   deriving (Eq, Ord, Show)
+
+comparison :: Comp -> Integer -> Integer -> Bool
+comparison = \case
+  Comp'LT  -> (<)
+  Comp'GT  -> (>)
+  Comp'EQ  -> (==)
+  Comp'LTE -> (<=)
+  Comp'GTE -> (>=)
+  Comp'NEQ -> (/=)
+  

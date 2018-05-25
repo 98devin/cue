@@ -36,6 +36,8 @@ import Control.Monad
 
 import Control.Monad.IO.Class (liftIO)
 
+
+
 -------------------------------------------------------------------
 --    Primary Parser Type                                        --
 ------------------------------------------------------------------- 
@@ -150,20 +152,19 @@ stmt'' tok cstr = do
   
 
 stmt :: P AST
-stmt =
-  stmt' Key'GET AST'Get <|>
-  stmt' Key'PUT AST'Put <|>
-  stmt' Key'POP AST'Pop <|>
-  stmt' Key'ADD AST'Add <|> 
-  stmt' Key'SUB AST'Sub <|> 
-  stmt' Key'MUL AST'Mul <|>
-  stmt' Key'DIV AST'Div <|>
-  stmt' Key'MOD AST'Mod <|>
-  tststmt <|>
-  stmt'' Key'INC AST'Inc <|>
-  stmt'' Key'DEC AST'Dec <|>
-  stmt'' Key'DIE AST'Die <|>
-  cuestmt
+stmt = stmt'  Key'GET (AST'Com Comb'GET) 
+  <|>  stmt'  Key'PUT  AST'Put 
+  <|>  stmt'  Key'POP (AST'Com Comb'POP)
+  <|>  stmt'  Key'ADD (AST'Com Comb'ADD)
+  <|>  stmt'  Key'SUB (AST'Com Comb'SUB)
+  <|>  stmt'  Key'MUL (AST'Com Comb'MUL)
+  <|>  stmt'  Key'DIV (AST'Com Comb'DIV)
+  <|>  stmt'  Key'MOD (AST'Com Comb'MOD)
+  <|>  stmt'' Key'INC  AST'Inc
+  <|>  stmt'' Key'DEC  AST'Dec
+  <|>  stmt'' Key'DIE  AST'Die
+  <|>  tststmt
+  <|>  cuestmt
   
   
 tststmt :: P AST

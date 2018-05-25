@@ -1,7 +1,6 @@
 {-# LANGUAGE
       RecordWildCards
-    , ScopedTypeVariables
-    , LambdaCase #-}
+    , OverloadedStrings #-}
 
 {- Author: Devin Hill (dhill45@jhu.edu) -}
       
@@ -14,15 +13,24 @@ import System.Exit
 import System.IO
 
 import Control.Exception
-import Control.Monad (unless, when)
+import Control.Monad (unless, when, forM_)
 
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B
+
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 import Data.List (foldl')
 import Data.Char (ord)
 
 import Parser.Pos
+import Parser.Err
+import Parser.Combinators
+
+import Cue.Scanner
+import Cue.Parser
+import Cue.Interpreter
 
   
 -------------------------------------------------------------------
@@ -34,10 +42,25 @@ main :: IO ()
 main = do
   -- Parse CLI args into options and get a bytestring
   -- representing the actual input as well
-  (CLIOptions{..}, input) <- handleArgs =<< getArgs 
+  (CLIOptions{..}, input, inFile) <- handleArgs =<< getArgs 
   
-  print input
+  tokens <- case runParser scan inFile of
+    Just (tokens, "")    -> return tokens
+    Just (_     , extra) -> die $ "unconsumed input: " ++ B.unpack extra
+    _                    -> die "fatal scanner error"
+    
+  parsed <- runPErr . runParser parse $ tokens
   
+  syms <- case parsed of
+    Right (syms, [])    -> return syms
+    Right (_, extra)    -> die $ "unconsumed tokens: " ++ show extra
+    Left err            -> die $ show err
+    
+  
+  final <- interpret syms input
+    
+  forM_ (dataQueue final Map.! 0) $ \num -> putStr $ show num ++ " "
+    
   exitSuccess
     
   
@@ -78,7 +101,7 @@ cliFlags =
 -- | Process the command line arguments received,
 --   and produce an object representing the options provided
 --   as well as the bytes which the intended file contains (be it stdin or some other)
-handleArgs :: [String] -> IO (CLIOptions, [Integer])
+handleArgs :: [String] -> IO (CLIOptions, [Integer], ByteString)
 handleArgs argv = case getOpt RequireOrder cliFlags argv of
   (o, otherOpts, []) -> do
     
@@ -87,19 +110,21 @@ handleArgs argv = case getOpt RequireOrder cliFlags argv of
     
     -- load a bytestring from either stdin or a file,
     -- checking for potential errors (no such file, etc.)
-    otherOpts <- case otherOpts of
+    (inFile, otherOpts) <- case otherOpts of
         
         -- If there is no command line input, read from stdin
-        [] -> words . B.unpack <$> B.getContents       
+        [inFile] -> (,) <$> B.readFile inFile <*> (words . B.unpack <$> B.getContents) 
         
         -- Otherwise use what's given
-        params -> return params
+        (inFile:params) -> flip (,) params <$> B.readFile inFile
+        
+        [] -> die "no source file provided"
         
         
     if optStringInput then
-        return (opts, map (toInteger . ord) . unwords $ otherOpts)
+        return (opts, map (toInteger . ord) . unwords $ otherOpts, inFile)
     else if optListInput then
-        return (opts, map read otherOpts)
+        return (opts, map read otherOpts, inFile)
     else
         die "what in tarnation"
       
