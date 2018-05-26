@@ -5,7 +5,6 @@
 manipulating various queue structures.
 
 
----
 ## building `cue`
 
 `cue` is implemented in Haskell and can be built easily using
@@ -15,7 +14,6 @@ or `cabal install` in the root of the repository should be sufficient.
 This creates the executable `cue` which is the interface to the
 interpreter for the language.
 
----
 ## running `cue` programs
 
 The `cue` executable expects to be supplied
@@ -35,7 +33,6 @@ Options recognized are
 Example programs are present in the `examples/` folder of this repo, and
 should be seen as demonstrations and starting points to test ideas.
 
----
 ## I/O
 
 Input and output are achieved using queue zero (`%0`). Initial program input
@@ -44,7 +41,6 @@ execution is printed out in order. There is currently no facility to
 interact with the user during execution, or to output in a form other
 than a sequence of integers, though this is a consideration.
 
----
 ## regarding computational class
 
 The computational class of the language is unknown, but it is suspected
