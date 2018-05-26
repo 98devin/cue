@@ -42,6 +42,7 @@ data Token
   | Sym'GTEQUALS
   | Sym'EQUALS
   | Sym'NOT
+  | Sym'MINUS
   | Sym'PERCENT
   | Key'GET
   | Key'PUT
@@ -95,6 +96,7 @@ symbols = Map.fromList
   , '{' -: Sym'LBRACE
   , '}' -: Sym'RBRACE
   , '!' -: Sym'NOT
+  , '-' -: Sym'MINUS
   ]    
   where
     (-:) :: a -> b -> (a, b)
@@ -135,7 +137,7 @@ digit = among . map match $ ['0'..'9']
   
 
 letter :: Scan Char
-letter = among . map match $ ['A'..'Z'] ++ ['a'..'z'] ++ "_-"
+letter = among . map match $ "_" ++ ['A'..'Z'] ++ ['a'..'z']
 
 
 -- general whitespace
@@ -164,7 +166,7 @@ number = Number . read <$> some digit
 
 symbol :: Scan Token
 symbol = do
-  chr <- among . map match $ "{};%=<>!"
+  chr <- among . map match $ "{};%=<>!-"
   
   -- if it could be part of a multi-char symbol,
   -- then test the next character to see if it is.

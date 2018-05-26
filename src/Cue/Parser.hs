@@ -124,8 +124,11 @@ number' = satisfy
 -- | Match a number token.
 number :: P Integer
 number = do
+  sign <- optional $ token Sym'MINUS
   Number n <- number'
-  return n
+  return $ case sign of
+    Nothing -> n
+    Just _  -> -n
   
   
 block :: P [AST]
