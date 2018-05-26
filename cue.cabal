@@ -2,16 +2,16 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3d14284416fe1a55faf0dbb46891ef6cdd222f84747d2e99be1f546f001a6ed5
+-- hash: 51ef3eaec06a31b474031ca9bb9ce6860ad1d086056c1c7d43c8915916d46e5f
 
 name:           cue
 version:        0.1.0.0
 category:       Language
-homepage:       https://github.com/githubuser/cue#readme
+homepage:       https://github.com/98devin/cue#readme
 author:         Devin Hill
 maintainer:     dhill45@jhu.edu
 copyright:      2018 Devin Hill
-license:        WTF
+license:        BSD
 license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
