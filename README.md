@@ -84,6 +84,9 @@ The accumulator, and all other values in the program, are integer-valued,
 and unbounded in range. Within each function body, the accumulator
 is initially zero-valued, and its state is not preserved across calls.
 
+Statements are generally terminated by a semicolon, but there is no semicolon
+following the block of a `tst` statement (specified later).
+
 Generally statements require one or more _queue identifiers_ as arguments,
 specifying which queues are operated upon. There are an infinite number of
 these queues, each addressable by a unique integer, and each initially empty
@@ -91,8 +94,7 @@ of values. An example identifier is `%0`, meaning "the queue associated
 with the integer value zero". Abstractly, these are somewhat like the registers
 of a real cpu, but they hold multiple values retrievable in FIFO order.
 
-Statements are generally terminated by a semicolon, but there is no semicolon
-following the block of a `tst` statement (specified later).
+Each queue can hold an unbounded number of unbounded integers (limited only by memory).
 
 # Accumulator-modifying commands
 

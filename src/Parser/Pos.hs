@@ -4,7 +4,7 @@
     , FlexibleInstances
     , UndecidableInstances #-}
     
-{- Author: Devin Hill (dhill45@jhu.edu) -}
+{- Author: Devin Hill (98devin@gmail.com) -}
     
 module Parser.Pos
   ( Pos(..)

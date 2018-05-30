@@ -2,7 +2,7 @@
       RecordWildCards
     , OverloadedStrings #-}
 
-{- Author: Devin Hill (dhill45@jhu.edu) -}
+{- Author: Devin Hill (98devin@gmail.com) -}
       
 module Main where
   
