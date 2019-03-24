@@ -43,6 +43,8 @@ data Token
   | Sym'NOT
   | Sym'MINUS
   | Sym'PERCENT
+  | Sym'DOLLAR
+  | Sym'COMMA
   | Key'GET
   | Key'PUT
   | Key'POP
@@ -56,6 +58,7 @@ data Token
   | Key'DIE
   | Key'INC
   | Key'DEC
+  | Key'END
   deriving (Show, Eq, Ord)
 
 
@@ -77,6 +80,7 @@ keywords = Map.fromList
   , "INC" -: Key'INC
   , "DEC" -: Key'DEC
   , "DIE" -: Key'DIE
+  , "END" -: Key'END
   ]
   where
     (-:) :: a -> b -> (a, b)
@@ -96,6 +100,8 @@ symbols = Map.fromList
   , '}' -: Sym'RBRACE
   , '!' -: Sym'NOT
   , '-' -: Sym'MINUS
+  , '$' -: Sym'DOLLAR
+  , ',' -: Sym'COMMA
   ]    
   where
     (-:) :: a -> b -> (a, b)
@@ -165,7 +171,7 @@ number = Number . read <$> some digit
 
 symbol :: Scan Token
 symbol = do
-  chr <- among . map match $ "{};%=<>!-"
+  chr <- among . map match $ "{};%=<>!-$,"
   
   -- if it could be part of a multi-char symbol,
   -- then test the next character to see if it is.

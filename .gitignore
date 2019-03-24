@@ -20,6 +20,7 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
+.vscode/
 
 # the executable we're generating
 cue

@@ -46,9 +46,6 @@ import Control.Monad.IO.Class (liftIO)
 type P a = Parser [Token] (PErr [ParseError] IO) a
 
 
-type Symbols = Map ByteString [AST]
-  
-
 -- | Give a preexisting parser a more specific error message
 (<!>) :: P a -> String -> P a
 p <!> s = p <??> const [ParseError s]
@@ -89,8 +86,15 @@ token kind = do
 decl :: P Symbols
 decl = do
   name <- ident
+  args <- many $ do
+    token Sym'COMMA
+    ident
   code <- block
-  return $ Map.fromList [ (name, code) ]
+  return $ Map.singleton name $ Proc
+    { procName = name
+    , procBody = code
+    , procArgs = args
+    }
     
 
 -- | Match specifically identifier tokens,
@@ -166,6 +170,7 @@ stmt = stmt'  Key'GET (AST'Com Comb'GET)
   <|>  stmt'' Key'INC  AST'Inc
   <|>  stmt'' Key'DEC  AST'Dec
   <|>  stmt'' Key'DIE  AST'Die
+  <|>  stmt'' Key'END  AST'End
   <|>  tststmt
   <|>  cuestmt
   
@@ -181,19 +186,33 @@ tststmt = do
   
 
 cuestmt :: P AST
-cuestmt = do
-  token Key'CUE
-  name <- ident
-  token Sym'SEMICOLON
-  return $ AST'Cue name
+cuestmt = 
+  token Key'CUE *> 
+  ((do
+    name <- ident
+  
+    args <- many $ do
+      token Sym'COMMA
+      regexpr
+      
+    token Sym'SEMICOLON
+    
+    return $ AST'Cue name args
+    
+  ) <|> (AST'Cbl <$> block))
   
   
 regexpr :: P RegExpr
-regexpr = token Sym'PERCENT *> (Queue <$> regexpr')
+regexpr = 
+    token Sym'PERCENT *> (Queue <$> regexpr')
 
-
+    
 regexpr' :: P RegExpr
-regexpr' = (Value <$> number) <|> regexpr
+regexpr' =
+        (Value <$> number)
+    <|> (Var   <$> ident )
+    <|> regexpr
+    <|> pure Accumulator
 
 
 comp :: P Comp

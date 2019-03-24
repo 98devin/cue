@@ -1,11 +1,13 @@
 
 # `cue`
 
+v 0.2.0.0
+
 `cue` is a minimal, esoteric, assembly-like language based on
 manipulating various queue structures.
 
 
-## building `cue`
+## Building `cue`
 
 `cue` is implemented in Haskell and can be built easily using
 stack or cabal. Simply cloning this repo and running `stack install`
@@ -14,10 +16,10 @@ or `cabal install` in the root of the repository should be sufficient.
 This creates the executable `cue` which is the interface to the
 interpreter for the language.
 
-## running `cue` programs
+## Running `cue` programs
 
 The `cue` executable expects to be supplied
-- cli options if present
+- cli options, if present
 - the name of the script file to execute
 - potentially, input to the script
 
@@ -28,7 +30,10 @@ Options recognized are
   and each character transformed into integers using ASCII,
   rather than as a sequence of space-separated integers.
 - `-e` Implies the input should be read from `stdin` rather than as
-  further command line arguments
+  further command line arguments.
+- `-q` Instructs `cue` to output not only the contents of queue 0 upon
+  the end of execution, but to present the contents of every non-empty
+  queue in a structured format.
 
 Example programs are present in the `examples/` folder of this repo, and
 should be seen as demonstrations and starting points to test ideas.
@@ -39,16 +44,14 @@ Input and output are achieved using queue zero (`%0`). Initial program input
 is written to the queue, and whatever is in this queue at the end of
 execution is printed out in order. There is currently no facility to
 interact with the user during execution, or to output in a form other
-than a sequence of integers, though this is a consideration.
+than a sequence of integers, though this is a consideration for later.
 
-## regarding computational class
+## Regarding computational class
 
 The computational class of the language is unknown, but it is suspected
 that a bitwise cyclic tag implementation could potentially
 be created to prove turing-completeness, while not suffering particularly
 from the queue-based nature of the language.
-
-
 
 # Syntax of `cue`
 
@@ -94,7 +97,8 @@ of values. An example identifier is `%0`, meaning "the queue associated
 with the integer value zero". Abstractly, these are somewhat like the registers
 of a real cpu, but they hold multiple values retrievable in FIFO order.
 
-Each queue can hold an unbounded number of unbounded integers (limited only by memory).
+Each queue can in principle hold an unbounded number of unbounded integers
+(limited only by the memory of the host computer to the interpreter).
 
 # Accumulator-modifying commands
 
@@ -157,7 +161,7 @@ If the queue being popped from is already empty, this will have no effect.
 
 ## `put`
 
-The `put` command, as its name may suggests, works as the opposite of
+The `put` command, as its name may suggest, works as the opposite of
 `get`, and enqueues the value of the accumulator at the end of the
 queue given as an argument. For example:
 ```
@@ -256,8 +260,8 @@ The usefulness of this is limited however when we cannot involve
 the accumulator in our comparisons. As such, if the left operand
 of the comparison is omitted, the value of the accumulator will
 be used for the comparison here:
-```
 
+```
 inc;
 
 tst < %0 {
@@ -271,7 +275,6 @@ tst < %0 {
 tst ! %3 {
     ...
 }
-
 ```
 
 
@@ -289,6 +292,31 @@ inc;
 tst > %0 { die; }
 put %2; # will not execute if %0 is greater than or equal to 1
 ```
+
+## `end`
+
+The `end` command acts as a stronger form of `die`, and
+stops not only the current procedure but the entire program
+execution. It therefore has more power than `die`, but requires
+care in the sense that it is not scoped.
+
+```
+main {
+    cue output_1;
+    cue end_later; # delay ending
+    cue output_2;
+} 
+
+end_later {
+    end;
+}
+
+output_1 { inc;      put %0; }
+output_2 { inc; inc; put %0; }
+```
+
+In the above example, we will only get `1` as output, whereas
+using `die` would result in both `1` and `2`.
 
 
 ## `cue`
@@ -313,7 +341,7 @@ count {
 }
 ```
 
-# More on Queue Identifiers
+# More on Queue Identifiers: Indirection
 
 To this point, queues have been identified by percent-sign-prefixed
 integers only. This is the most common way to address a queue,
@@ -346,20 +374,209 @@ Keep in mind that any empty queue will return a zero value, and so
 the queue `%0` is likely to be interacted with heavily in an especially
 large indirection chain.
 
+## Accumulator-indirection
+
+Further, the final kind of queue identifier allowed is
+one which represents the queue named by the value
+within the accumulator. This is formed by using a `%` with
+no accompanying number value:
+```
+main {
+    # instead of:
+    # inc; put %1;
+    # inc; put %2; ... etc.
+    
+    # we can instead write:
+    inc; put %;
+    inc; put %;
+}
+```
+
+Of course, this can also still be nested further, resulting
+in legal identifiers `%%`, `%%%`, and so on.
+
+
+# More on `cue`: Procedure Arguments
+
+The `cue` command (and procedure declarations) have been extended to allow procedures to take in arguments, meaning they do not need to know
+which queues they operate upon beforehand.
+
+For example, we could define the following 'generic'
+procedure which places a number into a certain queue:
+
+```
+# put the number 3
+# into a given queue `%a`
+put3, a {
+    inc; inc; inc;
+    put %a; # reference the argument here
+}
+```
+
+As can be seen, the arguments to the procedure follow
+its name when declared, in a comma-separated list. These
+identifiers can then be used within as a replacement
+for a specific queue identifying number. More arguments
+are likewise used:
+
+```
+# three-operand multiplication proc
+mult, a, b, c {
+    get %a; mul %b; # acc <- %a * %b
+    put %c;         # %c  <- acc
+}
+```
+
+If an identifier referenced does not exist, it
+is treated as having the value zero. Note that procedures
+and procedure arguments have separate namespaces, and so
+we can write something like the below without problems:
+```
+# proc name and arg name can overlap.
+# (of course this is not wise, from a clarity standpoint)
+foo, foo {
+    get %foo; inc; put %foo;
+    cue foo, %foo;
+}
+```
+
+Finally, as an unrecommended edge case, if TWO arguments
+have the same name, then the latter value takes precedence.
+
+## `cue`ing procedures with arguments
+
+In order to specify the values of these arguments,
+we simply naturally list the values we wish them to represent
+after the name in the `cue` command, likewise separated
+with commas. The queue identifiers will be evaluated, and then
+their values saved for the procedure to operate upon later.
+
+For example:
+```
+swap, a, b {
+    get %a; put %b;
+    get %b; put %a;
+}
+
+main {
+    inc; put %1;
+    inc; put %2;
+    
+    cue swap, %1, %2; # tell `swap` to use queues 1 and 2.
+    cue result;
+}
+
+result {
+    get %1; put %0;
+    get %2; put %0;
+}
+```
+
+We will get, of course, `2` and `1`.
+
+We can call a procedure with more arguments than it requires,
+and it will cause the queue expressions to be evaluated but nothing
+else to occur. For example:
+
+```
+non_arg_proc {
+    die;
+}
+
+main {
+    # this would cause values to be popped from
+    # queues 0, 1, and 2, in order to evaluate the
+    # queue identifier indirection targets.
+    # however it would not affect the call to
+    # `non_arg_proc` as it does not use parameters.
+    cue non_arg_proc, %%0, %%1, %%2;   
+}
+```
+
+# More on `cue`: Anonymous Procedures
+
+Finally, `cue` can prepare a block of code
+which is itself not globally declared as a procedure
+for later execution. In this sense, it acts as a kind
+of 'delay' statement.
+
+In our earlier example for `end`, we might have found it
+inconvenient that we needed to declare a procedure
+especially for the purpose of ending the program, simply
+to allow it to be `cue`d. Instead of this, we can write:
+```
+main {
+    cue output_1;
+    cue { end; } # delay end command for later
+    cue output_1;
+}
+
+etc...
+```
+
+and use the 'anonymous procedure' `{ end; }` instead of
+declaring it elsewhere, when the legibility is improved.
+
+These anonymous procedures inherit the value of the accumulator
+_at the moment they are `cue`d_, and this can be used to some benefit,
+generally by reducing some kinds of code duplication.
+```
+# instead of:
+main { 
+    cue anon1;
+    cue anon2; 
+}
+
+anon1 { inc;      put %1; }
+anon2 { inc; inc; put %2; }
+
+# we could instead, more concisely/powerfully, write:
+main {
+    inc; cue { put %; } 
+    inc; cue { put %; }
+}
+
+# note that this is NOT the same as
+main {
+    cue { inc; put %; }  
+    cue { inc; put %; }
+}
+```
+
+The anonymous procedures close over outside procedure arguments as well:
+```
+delayed_move, a, b {
+    get %a;
+    cue { put %b; } # references the correct `%b`
+}
+```
+
+Nesting this construct arbitrarily is legal.
+For example, one could limit the execution time of the program as a whole
+by delaying an `end` command by a few iterations. This is useful to prevent
+infinite execution in case of a logic error, etc.
+```
+main {
+    # setup eventual program termination
+    cue { cue { ... cue { end; } ... } }
+}
+```
+
+
 # Further features?
 
-That's it so far. `cue` is a very simple language in concept.
+That's it so far. `cue` is a very simple language in concept. The features
+which have been added were done with restraint, and the intent to make certain
+patterns which emerged more convenient to write, but not necessarily to impart
+unnecessary additional power to the underlying language.
 
-It may be interesting to expand `cue` to support arguments to procedures
-usable as queue references, or to allow the accumulator to be used
-as a constant to access some queue, among other ideas.
-
-Whether these will be added depends on whether it is
+Whether more, richer features will be added depends on whether it is
 - turing complete
 - humanly possible to write algorithms
 - remotely intriguing to think about
 
-in their absence. Minimalism is a good property of a language with such a strange
-core idea as this at first, but some extensions could
-be enabled with command line arguments if we wish to retain the restricted
-modality as well.
+in their absence. Minimalism would seem to be a good property
+of a language with such a strange core idea as this at first,
+but some extensions could be enabled with command line arguments
+if we wish to retain the restricted modality as well.
+

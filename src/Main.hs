@@ -21,6 +21,9 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
+import Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
+
 import Data.List (foldl')
 import Data.Char (ord)
 
@@ -37,7 +40,6 @@ import Cue.Interpreter
 --    Primary command-line interface to Cue interpreter          --
 -------------------------------------------------------------------
 
--- | Main application entry point
 main :: IO ()
 main = do
   -- Parse CLI args into options and get a bytestring
@@ -58,17 +60,19 @@ main = do
     
   
   final <- interpret syms input
-    
-  forM_ (dataQueue final Map.! 0) $ \num -> putStr $ show num ++ " "
+  
+  if optAllQueues then
+    forM_ (Map.toList $ _dataQueue final) $ \(q_no, q) ->
+      unless (Seq.null q) $ do
+        putStr $ "%" ++ show q_no ++ " {"
+        forM_ q $ \num -> putStr $ " " ++ show num
+        putStr " }\n"  
+  else
+    forM_ (_dataQueue final Map.! 0) $ \num -> 
+      putStr $ show num ++ " "
     
   exitSuccess
-    
   
--- | A useful combinator for slightly better syntax when
---   using on monadic computation results; works well with LambdaCase.
-(<&>) :: Functor f => f a -> (a -> b) -> f b
-(<&>) = flip (<$>)
-    
   
 -- | A datatype with a field for each option we might want to consider
 --   as a command line argument or flag.
@@ -76,6 +80,7 @@ data CLIOptions = CLIOptions
   { optStringInput :: Bool
   , optListInput   :: Bool
   , optSTDINput    :: Bool
+  , optAllQueues   :: Bool
   }
 
   
@@ -85,6 +90,7 @@ defaultOptions = CLIOptions
   { optStringInput = False
   , optListInput   = True
   , optSTDINput    = False
+  , optAllQueues   = False
   }
   
   
@@ -93,14 +99,18 @@ defaultOptions = CLIOptions
 --   Many or all of these options will probably just end up being toggles, here.
 cliFlags :: [OptDescr (CLIOptions -> CLIOptions)]
 cliFlags =
-  [ Option ['s'] []
+  [ Option "s" ["ascii"]
       (NoArg $ \o -> o { optStringInput = True
                        , optListInput   = False }) 
       "use the cli args as string contents of the input queue"
   
-  , Option ['e'] []
+  , Option "e" ["stdin"]
       (NoArg $ \o -> o { optSTDINput = True })
       "read input from STDIN"
+      
+  , Option "q" ["show-queues"]
+      (NoArg $ \o -> o { optAllQueues = True })
+      "print the contents of every non-empty queue"
       
   ]
   

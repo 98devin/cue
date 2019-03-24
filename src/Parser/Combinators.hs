@@ -31,6 +31,7 @@ module Parser.Combinators
 
 import Control.Applicative  
 import Control.Monad
+import qualified Control.Monad.Fail as Fail
 import Control.Monad.IO.Class
 import Control.Arrow (first)
 
@@ -98,7 +99,10 @@ instance MonadIO m => MonadIO (Parser s m) where
     return (a, s)
 
 
-
+instance Fail.MonadFail m => Fail.MonadFail (Parser s m) where
+  fail msg = Parser $ \_ -> Fail.fail msg
+    
+    
 -------------------------------------------------------------------
 --    Parsable class, for abstracting over the parsed type       --
 -------------------------------------------------------------------

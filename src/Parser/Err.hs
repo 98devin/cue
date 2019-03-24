@@ -22,6 +22,7 @@ import Parser.Combinators
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
+import qualified Control.Monad.Fail as Fail
 
 import Control.Arrow (first, second)
 
@@ -35,7 +36,7 @@ import Control.Exception
 -------------------------------------------------------------------
 
 -- | Type representing a parser error
-data ParseError = ParseError { errorMsg :: String }
+newtype ParseError = ParseError { errorMsg :: String }
 
 instance Exception ParseError where
   -- no methods needed
@@ -98,6 +99,10 @@ instance MonadIO m => MonadIO (PErr e m) where
   liftIO = PErr . fmap Right . liftIO
   
   
+instance Fail.MonadFail m => Fail.MonadFail (PErr e m) where
+  fail = PErr . fmap Left . Fail.fail
+  
+  
   
 -------------------------------------------------------------------
 --    Instance Declarations (PWarn)                              --
@@ -110,7 +115,8 @@ instance Functor f => Functor (PWarn e f) where
 instance (Applicative m, Monoid e) => Applicative (PWarn e m) where
   pure = PWarn . pure . (,) mempty
   
-  (PWarn p1) <*> (PWarn p2) = PWarn $ (\(e, f) (e2, a) -> (e <> e2, f a)) <$> p1 <*> p2
+  (PWarn p1) <*> (PWarn p2) = PWarn $ 
+    (\(e, f) (e2, a) -> (e <> e2, f a)) <$> p1 <*> p2
   
   
 instance (Monoid e, Monad m) => Monad (PWarn e m) where
@@ -136,6 +142,10 @@ instance (Monoid e, MonadIO m) => MonadIO (PWarn e m) where
   liftIO = PWarn . fmap ((,) mempty) . liftIO
    
   
+instance (Monoid e, Fail.MonadFail m) => Fail.MonadFail (PWarn e m) where
+  fail = PWarn . fmap ((,) mempty) . Fail.fail
+  
+  
 -------------------------------------------------------------------
 --    Provided Combinators/Helpers                               --
 -------------------------------------------------------------------    
@@ -158,7 +168,6 @@ instance (Monoid e, Monad m) => PErrorT PWarn e m where
     (e, a) <- runPWarn $ runParser p s
     return (fe s <> e, a) -- this seems backwards, but is actually correct I think
   
-
 -- | Reversed `failWithContext` synonym
 (<??>) :: (Monoid e, Monad m, PErrorT p e m) => Parser s (p e m) a -> (s -> e) -> Parser s (p e m) a
 (<??>) = flip failWithContext

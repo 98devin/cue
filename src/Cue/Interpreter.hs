@@ -2,12 +2,18 @@
       OverloadedStrings
     , RankNTypes
     , PatternSynonyms
-    , LambdaCase #-}
+    , LambdaCase
+    , TemplateHaskell
+    , GADTs
+    , MultiParamTypeClasses
+    , FlexibleInstances
+    , FunctionalDependencies #-}
 
 {- Author: Devin Hill (98devin@gmail.com) -}
 
 module Cue.Interpreter where
   
+import Control.Lens
 
 import Control.Monad
 import Control.Monad.State
@@ -27,26 +33,29 @@ import Data.Maybe (fromMaybe)
 import Cue.Abstract
 
 
+data Call
+  = NamedCall ByteString [Integer]
+  | Closure [AST] Integer ProcInst
+  deriving (Eq, Show)
 
-type Symbols = Map ByteString [AST]
-
-
+  
 data InterpState = IState
-  { callQueue :: Seq ByteString
-  , dataQueue :: Map Integer (Seq Integer)
-  , symbols   :: Symbols
-  , acc       :: Integer
+  { _callQueue :: Seq Call
+  , _dataQueue :: Map Integer (Seq Integer)
+  , _symbols   :: Symbols
+  , _acc       :: Integer
   }
   deriving (Eq, Show)
 
+makeFieldsNoPrefix ''InterpState
   
   
 initialState :: Symbols -> [Integer] -> InterpState
 initialState syms input = IState
-  { callQueue = Seq.fromList ["main"]
-  , dataQueue = Map.fromList [ (0, Seq.fromList input) ]
-  , symbols   = syms
-  , acc       = 0
+  { _callQueue = Seq.fromList [ NamedCall "main" [] ]
+  , _dataQueue = Map.fromList [ (0, Seq.fromList input) ]
+  , _symbols   = syms
+  , _acc       = 0
   }
   
 
@@ -54,131 +63,162 @@ type I' r a = StateT InterpState (ContT r IO) a
   
 type I a = forall r. I' r a
 
-  
+
 interpret :: Symbols -> [Integer] -> IO InterpState
-interpret syms input = 
-  flip runContT return . 
-  execStateT interp $ initialState syms input
+interpret syms input =
+  (`runContT` return) $
+    execStateT interp $
+      initialState syms input
 
 
 interp :: I ()
-interp = do
-  calls <- gets callQueue
-  unless (Seq.null calls) $ do
-    let c :<| cs  = calls
-    modify' $ \s -> 
-      s { callQueue = cs, acc = 0 }
-    syms <- gets symbols
-    let body = Map.findWithDefault [] c syms
-    callCC $ \exit ->
-      forM_ body $ \stmt -> do
-        interpStmt exit stmt
-    interp
-          
-          
-getNthQueue :: Integer -> I (Seq Integer)
-getNthQueue n = fromMaybe Empty <$> gets (Map.lookup n . dataQueue)
-          
-
-getRExp :: RegExpr -> I Integer
-getRExp = \case
-  Value n -> return n
-  Queue q -> getRExp' q
+interp = use callQueue >>= \case
+  Seq.Empty -> return ()
   
+  call :<| cs -> do
+    
+    callQueue .= cs
+    acc       .= 0
+    syms <- use symbols
+    
+    case call of
+      NamedCall procName args -> do
+        let proc = Map.findWithDefault
+                    (emptyProc procName)
+                    procName
+                    syms      
+        let inst = makeInst proc args
+        loop inst          
+        
+      Closure body accVal inst -> do
+        acc .= accVal
+        loop $ inst {instBody = body}
+  
+  where
+    loop inst = 
+      callCC $ \exit -> do
+      callCC $ \next -> do
+        interpCall next exit inst
+      interp
+      
+        
+interpCall :: (() -> I' r ()) -- next continuation, end procedure
+           -> (() -> I' r ()) -- exit continuation, end program
+           -> ProcInst
+           -> I' r ()
+interpCall next exit inst = do
+  let interp' = interpStmt next exit inst
+  forM_ (instBody inst) interp'
+           
+    
+getNthQueue :: Integer -> I (Seq Integer)
+getNthQueue n = 
+  use $ dataQueue
+      . to (Map.lookup n)
+      . to (fromMaybe Seq.Empty)
+  
+      
+getQueueVal :: Seq Integer -> (Integer, Seq Integer)
+getQueueVal = \case
+  Seq.Empty -> (0, Seq.Empty)
+  v :<| vs  -> (v, vs)   
 
-getRExp' :: RegExpr -> I Integer
-getRExp' = \case
-  Value n  -> return n
+  
+getRExp :: ProcInst -> RegExpr -> I Integer
+getRExp inst = \case 
+  Accumulator -> use acc
+  Value n -> return n
+  Var bs ->
+    return $ Map.findWithDefault 0 bs (instArgs inst)
+  Queue re ->
+    getRExp' inst re
+
+    
+getRExp' :: ProcInst -> RegExpr -> I Integer
+getRExp' inst = \case
+  Accumulator -> use acc
+  Value n -> return n
+  Var bs ->
+    return $ Map.findWithDefault 0 bs (instArgs inst)
   Queue re -> do
-    q <- getRExp' re
+    q <- getRExp' inst re
     e <- getNthQueue q
 
-    let (val, e') = case e of
-          Empty    -> (0, Empty)
-          v :<| vs -> (v, vs)
+    let (val, e') = getQueueVal e
     
-    modify' $ \s ->
-      s { dataQueue = Map.insert q e' $ dataQueue s }
-      
+    dataQueue %= Map.insert q e'
+          
     return val
     
 
-interpStmt :: (() -> I' r ()) -> AST -> I' r ()
-interpStmt exit = \case    
+interpStmt :: (() -> I' r ()) -- next continuation, end procedure
+           -> (() -> I' r ()) -- exit continuation, end program
+           -> ProcInst        -- the proc within which we are working
+           -> AST -> I' r ()
+interpStmt next exit inst = 
+  let rExp  = getRExp  inst
+      rExp' = getRExp' inst 
+  in \case    
   AST'Put re -> do
-    
-    q <- getRExp re
+    q <- rExp re
     e <- getNthQueue q
+    a <- use acc
     
-    a <- gets acc
-    let e' = e :|> a
+    dataQueue %= Map.insert q (e :|> a)
     
-    -- Update modified queue
-    modify' $ \s ->
-      s { dataQueue = Map.insert q e' $ dataQueue s }
     
   AST'Com com re -> do
-    
-    q <- getRExp re
-    e <- getNthQueue q
-    
-    let (val, e') = case e of
-          Empty    -> (0, Empty)
-          v :<| vs -> (v, vs)
-    
-    -- Update accumulator and modified queue
-    modify' $ \s ->
-      s { acc = combination com (acc s) val, dataQueue = Map.insert q e' $ dataQueue s }
+    val <- rExp' re
+    acc %= flip (combination com) val
+     
     
   AST'Tst Accumulator comp rhs body -> do
         
-      rq <- getRExp rhs
+      rq <- rExp rhs
       re <- getNthQueue rq
       
-      let (val, re') = case re of
-            Empty    -> (0, Empty)
-            v :<| vs -> (v, vs)
+      let (val, re') = getQueueVal re
             
-      -- Update modified queue
-      modify' $ \s ->
-        s { dataQueue = Map.insert rq re' $ dataQueue s }
+      dataQueue %= Map.insert rq re'
             
-      a <- gets acc
+      a <- use acc
       
       when (comparison comp a val) $
-        forM_ body (interpStmt exit)
+        forM_ body (interpStmt next exit inst)
+        
         
   AST'Tst lhs comp rhs body -> do
     
-    lq <- getRExp lhs
+    lq <- rExp lhs
     le <- getNthQueue lq
     
-    let (vall, le') = case le of
-          Empty    -> (0, Empty)
-          v :<| vs -> (v, vs)
-          
-    rq <- getRExp rhs
+    let (vall, le') = getQueueVal le
+    
+    rq <- rExp rhs
     re <- getNthQueue rq
     
-    let (valr, re') = case re of
-          Empty    -> (0, Empty)
-          v :<| vs -> (v, vs)
-          
-    -- Update modified queues
-    modify' $ \s ->
-      s { dataQueue = Map.insert rq re' .
-                      Map.insert lq le' $ dataQueue s }
-          
-    when (comparison comp vall valr) $
-      forM_ body (interpStmt exit)
+    let (valr, re') = getQueueVal re      
     
-  AST'Die -> exit ()
+    dataQueue %=
+        Map.insert rq re'
+      . Map.insert lq le'
+        
+    when (comparison comp vall valr) $
+      forM_ body (interpStmt next exit inst)
+      
+  AST'Die -> next ()
   
-  AST'Inc -> modify' $ \s -> s { acc = succ (acc s) }
+  AST'End -> exit ()
   
-  AST'Dec -> modify' $ \s -> s { acc = pred (acc s) }
+  AST'Inc -> acc %= succ
+    
+  AST'Dec -> acc %= pred
+    
+  AST'Cue bs args -> do
+    args' <- mapM rExp args 
+    callQueue %= (|> NamedCall bs args')
   
-  AST'Cue bs -> modify' $ \s -> s { callQueue = callQueue s :|> bs }
-  
-  
+  AST'Cbl bl -> do
+    ac <- use acc
+    callQueue %= (|> Closure bl ac inst)
   
