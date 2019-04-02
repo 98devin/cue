@@ -83,10 +83,11 @@ interp = use callQueue >>= \case
     
     case call of
       NamedCall procName args -> do
-        let proc = Map.findWithDefault
-                    (emptyProc procName)
-                    procName
-                    syms      
+        let proc =
+              Map.findWithDefault
+                (emptyProc procName)
+                procName
+                syms      
         let inst = makeInst proc args
         loop inst          
         
