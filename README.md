@@ -48,10 +48,15 @@ than a sequence of integers, though this is a consideration for later.
 
 ## Regarding computational class
 
-The computational class of the language is unknown, but it is suspected
-that a bitwise cyclic tag implementation could potentially
-be created to prove turing-completeness, while not suffering particularly
-from the queue-based nature of the language.
+The computational class of the language has been proven to be
+Turing-complete, via an implementation of the extremely minimal
+turing-complete computational system [Bitwise Cyclic Tag](https://esolangs.org/wiki/Bitwise_Cyclic_Tag). This is provided as an example, in the
+files
+- `examples/bct.q` - uses various v0.2.0.0 features
+- `examples/bct-min.q` - has been reduced to use only v0.1.0.0 features.
+
+As a result this shows as well that the power of the language
+has not been increased by the addition of various features.
 
 # Syntax of `cue`
 
@@ -568,10 +573,11 @@ main {
 That's it so far. `cue` is a very simple language in concept. The features
 which have been added were done with restraint, and the intent to make certain
 patterns which emerged more convenient to write, but not necessarily to impart
-unnecessary additional power to the underlying language.
+unnecessary additional power to the underlying language, because it is not
+meant to be general-purpose per se, but rather as a proof of concept of
+some simple computational model.
 
 Whether more, richer features will be added depends on whether it is
-- turing complete
 - humanly possible to write algorithms
 - remotely intriguing to think about
 
